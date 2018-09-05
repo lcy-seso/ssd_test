@@ -48,9 +48,8 @@ def gen_train_list(data_dir, save_path):
             fout.write("%s %s\n" % (img, os.path.splitext(img)[0] + ".txt"))
 
 
-def virtualize_bbox(image_dir, lbl_dir, save_dir):
-    def __proc_one_image(image_path, lbl_path, save_path):
-        TARGET_SIZE = (300, 300)
+def virtualize_bbox(image_dir, lbl_dir, save_dir, TARGET_SIZE=None):
+    def __proc_one_image(image_path, lbl_path, save_path, TARGET_SIZE):
         im = cv2.imread(image_path)
         height, width, depth = im.shape
 
@@ -61,15 +60,16 @@ def virtualize_bbox(image_dir, lbl_dir, save_dir):
             xmax = int(round(lbl["posX"] + lbl["width"]))
             ymax = int(round(lbl["posY"] + lbl["height"]))
 
-            im = cv2.resize(im, TARGET_SIZE)
+            if TARGET_SIZE is not None:
+                im = cv2.resize(im, TARGET_SIZE)
 
-            w_scale = TARGET_SIZE[0] / width
-            h_scale = TARGET_SIZE[0] / height
+                w_scale = TARGET_SIZE[0] / width
+                h_scale = TARGET_SIZE[0] / height
 
-            xmin = int(round(xmin * w_scale))
-            ymin = int(round(ymin * h_scale))
-            xmax = int(round(xmax * w_scale))
-            ymax = int(round(ymax * h_scale))
+                xmin = int(round(xmin * w_scale))
+                ymin = int(round(ymin * h_scale))
+                xmax = int(round(xmax * w_scale))
+                ymax = int(round(ymax * h_scale))
 
             cv2.rectangle(im, (xmin, ymin), (xmax, ymax),
                           (0, (1 - xmin) * 255, xmin * 255), 2)
@@ -83,9 +83,7 @@ def virtualize_bbox(image_dir, lbl_dir, save_dir):
             os.path.join(image_dir, image),
             os.path.join(lbl_dir,
                          os.path.splitext(image)[0] + ".txt"),
-            os.path.join(save_dir, image))
-
-        break
+            os.path.join(save_dir, image), TARGET_SIZE)
 
 
 if __name__ == "__main__":
@@ -97,6 +95,7 @@ if __name__ == "__main__":
     virtualize_bbox(
         image_dir="0905/images",
         lbl_dir="0905/annotations",
-        save_dir="0905/bounding_pox")
+        save_dir="0905/bounding_pox",
+        TARGET_SIZE=(300, 300))
     # gen_train_list("data", "data/train_list.txt")
     # label_dict("data/annotations", "data/label_list.txt")
