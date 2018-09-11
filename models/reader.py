@@ -13,6 +13,45 @@ import image_util
 from paddle.utils.image_util import *
 
 
+def virtualize_bbox(image_dir, lbl_dir, save_dir, TARGET_SIZE=None):
+    def __proc_one_image(image_path, lbl_path, save_path, TARGET_SIZE):
+        im = cv2.imread(image_path)
+        height, width, depth = im.shape
+
+        labels = json.loads(open(lbl_path, "r").readline())
+        for lbl in labels:
+            xmin = int(round(lbl["posX"]))
+            ymin = int(round(lbl["posY"]))
+            xmax = int(round(lbl["posX"] + lbl["width"]))
+            ymax = int(round(lbl["posY"] + lbl["height"]))
+
+            if TARGET_SIZE is not None:
+                im = cv2.resize(im, TARGET_SIZE)
+
+                w_scale = TARGET_SIZE[0] / width
+                h_scale = TARGET_SIZE[0] / height
+
+                xmin = int(round(xmin * w_scale))
+                ymin = int(round(ymin * h_scale))
+                xmax = int(round(xmax * w_scale))
+                ymax = int(round(ymax * h_scale))
+
+            cv2.rectangle(im, (xmin, ymin), (xmax, ymax),
+                          (0, (1 - xmin) * 255, xmin * 255), 2)
+        cv2.imwrite(save_path, im)
+
+    if os.path.exists(image_dir):
+        shutil.rmtree(save_dir)
+    os.mkdir(save_dir)
+
+    for image in os.listdir(image_dir):
+        __proc_one_image(
+            os.path.join(image_dir, image),
+            os.path.join(lbl_dir,
+                         os.path.splitext(image)[0] + ".txt"),
+            os.path.join(save_dir, image), TARGET_SIZE)
+
+
 class Settings(object):
     def __init__(self, data_dir, label_file, resize_h, resize_w, mean_value):
         self._data_dir = data_dir
@@ -91,7 +130,7 @@ def _reader_creator(settings, file_list, mode, shuffle):
                 label_path = os.path.join(settings.data_dir, "annotations",
                                           label_path)
             elif mode == "infer":
-                img_path = os.path.join(settings.data_dir, "images",
+                img_path = os.path.join(settings.data_dir, "resized_images",
                                         line.strip().split()[0])
 
             img = Image.open(img_path)
@@ -146,7 +185,7 @@ def _reader_creator(settings, file_list, mode, shuffle):
 
             if mode == "train" or mode == "test":
                 if mode == "train" and len(sample_labels) == 0: continue
-                yield img.astype("float32"), sample_labels
+                yield img, sample_labels
             elif mode == "infer":
                 yield img.astype("float32")
 
@@ -167,6 +206,7 @@ def infer(settings, file_list):
 
 if __name__ == "__main__":
     from config.pascal_voc_conf import cfg
+    mean = [57, 56, 58]
 
     train_file_list = "data/0908/05_train_list.txt"
     data_args = Settings(
@@ -174,8 +214,24 @@ if __name__ == "__main__":
         label_file="label_list.txt",
         resize_h=cfg.IMG_HEIGHT,
         resize_w=cfg.IMG_WIDTH,
-        mean_value=[57, 56, 58])
+        mean_value=mean)
 
     for idx, data in enumerate(train(data_args, train_file_list)()):
         print("image %d" % (idx + 1))
         print(data)
+
+        img = data[0].reshape(3, cfg.IMG_HEIGHT, cfg.IMG_WIDTH)
+        _, xmin, ymin, xmax, ymax, _ = data[1][0]
+
+        xmin = int(round(xmin * cfg.IMG_WIDTH))
+        ymin = int(round(ymin * cfg.IMG_HEIGHT))
+        xmax = int(round(xmax * cfg.IMG_WIDTH))
+        ymax = int(round(ymax * cfg.IMG_HEIGHT))
+
+        # img = np.transpose(img, [1, 2, 0]).astype(np.int32)
+        img = np.transpose(img, [1, 2, 0])
+        cv2.imwrite("tmp.png", img)
+        img = cv2.imread("tmp.png")
+        cv2.rectangle(img, (xmin, ymin), (xmax, ymax),
+                      (0, (1 - xmin) * 255, xmin * 255), 2)
+        cv2.imwrite("input/img_%d.png" % (idx), img)

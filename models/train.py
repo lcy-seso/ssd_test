@@ -9,7 +9,11 @@ import vgg_ssd_net
 from config.pascal_voc_conf import cfg
 
 
-def train(train_file_list, data_args, init_model_path, dev_file_list=None):
+def train(train_file_list,
+          data_args,
+          init_model_path,
+          save_dir,
+          dev_file_list=None):
     optimizer = paddle.optimizer.Momentum(
         momentum=cfg.TRAIN.MOMENTUM,
         learning_rate=cfg.TRAIN.LEARNING_RATE,
@@ -52,9 +56,11 @@ def train(train_file_list, data_args, init_model_path, dev_file_list=None):
                 sys.stdout.flush()
 
         if isinstance(event, paddle.event.EndPass):
-            if not (event.pass_id + 1) % 3:
+            if not (event.pass_id + 1) % 20:
                 with gzip.open(
-                        "checkpoints/params_pass_%05d.tar.gz" % event.pass_id,
+                        os.path.join(
+                            save_dir,
+                            "params_pass_%05d.tar.gz" % event.pass_id),
                         "w") as f:
                     trainer.save_parameter_to_tar(f)
 
@@ -89,4 +95,5 @@ if __name__ == "__main__":
         train_file_list=train_file_list,
         dev_file_list=dev_file_list,
         data_args=data_args,
+        save_dir="checkpoints",
         init_model_path=init_model_path)

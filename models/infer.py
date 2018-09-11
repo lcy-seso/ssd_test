@@ -83,21 +83,21 @@ def infer(eval_file_list, save_path, data_args, batch_size, model_path,
 
 
 if __name__ == "__main__":
-    model_dir = "/data/data1/yincao/detection_data/0908/checkpoints"
+    model_dir = "exp"
 
     paddle.init(use_gpu=True, trainer_count=1)
 
     data_args = reader.Settings(
         data_dir="data/0908",
-        label_file="0908_label_list.txt",
+        label_file="label_list.txt",
         resize_h=cfg.IMG_HEIGHT,
         resize_w=cfg.IMG_WIDTH,
         mean_value=[57, 56, 58])
 
     infer(
-        eval_file_list="data/0908/train_list.txt",
+        eval_file_list="data/0908/05_train_list.txt",
         save_path="infer_output.txt",
         data_args=data_args,
-        batch_size=4,
-        model_path=(os.path.join(model_dir, "params_pass_00199.tar.gz")),
+        batch_size=1,
+        model_path=(os.path.join(model_dir, "params_pass_00399.tar.gz")),
         threshold=0.3)
