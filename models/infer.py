@@ -1,3 +1,4 @@
+import pdb
 import os
 import sys
 import gzip
@@ -14,7 +15,10 @@ from config.pascal_voc_conf import cfg
 def _infer(inferer, infer_data, threshold):
     ret = []
     infer_res = inferer.infer(input=infer_data)
+    if not len(infer_res):
+        return None
     keep_inds = np.where(infer_res[:, 2] >= threshold)[0]
+
     for idx in keep_inds:
         ret.append([
             infer_res[idx][0], infer_res[idx][1] - 1, infer_res[idx][2],
@@ -71,6 +75,7 @@ def infer(eval_file_list, save_path, data_args, batch_size, model_path,
             img_h.append(h)
             if len(test_data) == batch_size:
                 ret_res = _infer(inferer, test_data, threshold)
+                if ret_res is None: continue
                 save_batch_res(ret_res, img_w, img_h, fname_list, fout)
                 test_data = []
                 fname_list = []
@@ -83,7 +88,7 @@ def infer(eval_file_list, save_path, data_args, batch_size, model_path,
 
 
 if __name__ == "__main__":
-    model_dir = "exp"
+    model_dir = "checkpoints"
 
     paddle.init(use_gpu=True, trainer_count=1)
 
@@ -95,9 +100,9 @@ if __name__ == "__main__":
         mean_value=[57, 56, 58])
 
     infer(
-        eval_file_list="data/0908/05_train_list.txt",
+        eval_file_list="data/0908/test_list.txt",
         save_path="infer_output.txt",
         data_args=data_args,
         batch_size=1,
-        model_path=(os.path.join(model_dir, "params_pass_00399.tar.gz")),
+        model_path=(os.path.join(model_dir, "params_pass_00259.tar.gz")),
         threshold=0.3)
